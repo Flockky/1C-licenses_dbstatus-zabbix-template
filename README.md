@@ -1,0 +1,1 @@
+# 1C-licenses_dbstatus-zabbix-template
