@@ -1,0 +1,47 @@
+zabbix_export:
+  version: '7.4'
+  template_groups:
+    - uuid: af36653e02304d2e8e3900010d9d20c2
+      name: 'Наши шаблоны'
+  templates:
+    - uuid: b60dc3258a76497fb342cdc5e0f2bf16
+      template: '1C access DB'
+      name: '1C доступность БД'
+      groups:
+        - name: 'Наши шаблоны'
+      items:
+        - uuid: 444cd7a2839d49bca1b7ebe1e5ba5868
+          name: '1C доступность БД get data'
+          key: 'system.run[type "C:\Program Files\Zabbix Agent\scripts\1C_access.txt"]'
+          value_type: TEXT
+          timeout: 100s
+      discovery_rules:
+        - uuid: 5672426eb7324131a67138ff154caf83
+          name: '1C Доступность БД discovery'
+          type: DEPENDENT
+          key: 1c_access_db_discovery
+          item_prototypes:
+            - uuid: 4c403281bffe41a0a5e4fcb23b12b09c
+              name: '1C доступность БД. {#1C_DB_NAME}'
+              key: 'system.run[{#1C_DB_COMMAND}]'
+              trends: '0'
+              preprocessing:
+                - type: REGEX
+                  parameters:
+                    - 'off'
+                    - '1'
+                  error_handler: CUSTOM_VALUE
+                  error_handler_params: '0'
+              timeout: 300s
+              tags:
+                - tag: 1C
+                  value: 'Доступность БД'
+          master_item:
+            key: 'system.run[type "C:\Program Files\Zabbix Agent\scripts\1C_access.txt"]'
+          lld_macro_paths:
+            - lld_macro: '{#1C_DB_COMMAND}'
+              path: $.COM
+            - lld_macro: '{#1C_DB_NAME}'
+              path: $.name
+            - lld_macro: '{#1C_DB_SERVER}'
+              path: $.SERV
