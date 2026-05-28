@@ -1,0 +1,81 @@
+zabbix_export:
+  version: '7.4'
+  template_groups:
+    - uuid: af36653e02304d2e8e3900010d9d20c2
+      name: 'Наши шаблоны'
+  templates:
+    - uuid: e9091c1fe3b144b5bfd2089ff2973f8a
+      template: '1C Licenses'
+      name: '1C лицензии'
+      groups:
+        - name: 'Наши шаблоны'
+      items:
+        - uuid: f2a9ba2e5db046ecb9b8174c7a4c3497
+          name: '1С лицензии всего'
+          type: HTTP_AGENT
+          key: 1C.total.lic
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - |
+                  // Парсим ответ от Zabbix API
+                  var response = JSON.parse(value);
+                  
+                  // Проверяем, есть ли ошибка
+                  if (response.error) {
+                      throw new Error('Zabbix API Error: ' + response.error.data);
+                  }
+                  
+                  var items = response.result;
+                  var totalLicenses = 0;
+                  
+                  // Проходим по всем найденным элементам
+                  for (var i = 0; i < items.length; i++) {
+                      var lastValue = items[i].lastvalue;
+                      
+                      // lastvalue приходит как строка, преобразуем в число
+                      // Если значение пустое или null, считаем как 0
+                      if (lastValue !== null && lastValue !== "") {
+                          var num = parseFloat(lastValue);
+                          if (!isNaN(num)) {
+                              totalLicenses += num;
+                          }
+                      }
+                  }
+                  
+                  // Возвращаем итоговую сумму
+                  return totalLicenses;
+          url: 'https://zabbix.sberins.ru/api_jsonrpc.php'
+          post_type: JSON
+          posts: '{"jsonrpc":"2.0","method":"item.get","params":{"output":["lastvalue"],"group":"1C","search":{"name":"1C Лицензии"}},"id":1}'
+          headers:
+            - name: Content-Type
+              value: application/json-rpc
+            - name: Authorization
+              value: 'Bearer a06eba790e9b4e78db1e767490762431e3a3aca497a21f917740563f94b459d2'
+          request_method: POST
+        - uuid: fcab3c7d35a649939d8d5ff0b82592e5
+          name: '1C лицензии get data'
+          key: 'system.run[type "C:\Program Files\Zabbix Agent\scripts\1C_lic.txt"]'
+          value_type: TEXT
+          timeout: 100s
+      discovery_rules:
+        - uuid: 954cb4bd19dd429aaf5267336a1814e7
+          name: '1C License discovery'
+          type: DEPENDENT
+          key: 1c_lic_discovery
+          item_prototypes:
+            - uuid: e40b6db0c1044770a5a004e068fb9a8d
+              name: '1C Лицензии. {#1C_SERVER}'
+              key: 'system.run[{#1C_COMMAND}]'
+              timeout: 300s
+              tags:
+                - tag: 1C
+                  value: Лицензии
+          master_item:
+            key: 'system.run[type "C:\Program Files\Zabbix Agent\scripts\1C_lic.txt"]'
+          lld_macro_paths:
+            - lld_macro: '{#1C_COMMAND}'
+              path: $.COM
+            - lld_macro: '{#1C_SERVER}'
+              path: $.SERV
